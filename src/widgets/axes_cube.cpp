@@ -156,7 +156,7 @@ static bool is_face_visible(const std::vector<glm::vec3> &m_transformed_vertices
     return normal.z < 0;
 }
 
-void AxesCube::update_transformed_vertices() const
+void AxesCube::update_transformed_vertices()
 {
     const glm::quat corrected_view_quat =
             glm::angleAxis(glm::pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::inverse(m_quat);
@@ -219,8 +219,6 @@ int AxesCube::get_face_at_position(double x, double y) const
 {
     if (m_width == 0 || m_height == 0)
         return -1;
-
-    update_transformed_vertices();
 
     const glm::vec2 p(x - m_width / 2.0f, y - m_height / 2.0f);
     const auto &faces = get_cached_model().second;

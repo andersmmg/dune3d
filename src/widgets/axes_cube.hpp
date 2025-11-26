@@ -19,15 +19,15 @@ private:
     int m_width = 0;
     int m_height = 0;
 
-    mutable std::vector<glm::vec3> m_transformed_vertices;
-    mutable glm::quat m_cached_quat{1, 0, 0, 0};
-    mutable int m_cached_width = 0;
-    mutable int m_cached_height = 0;
+    std::vector<glm::vec3> m_transformed_vertices;
+    glm::quat m_cached_quat{1, 0, 0, 0};
+    int m_cached_width = 0;
+    int m_cached_height = 0;
 
     void render(const Cairo::RefPtr<Cairo::Context> &cr, int w, int h);
     void create_layout();
     void setup_controllers();
     int get_face_at_position(double x, double y) const;
-    void update_transformed_vertices() const;
+    void update_transformed_vertices();
 };
 } // namespace dune3d
