@@ -142,7 +142,7 @@ dim-label</property>
                   <object class="GtkOverlay">
                     <property name="vexpand">True</property>
                     <child type="overlay">
-                      <object class="GtkBox" id="lollipop_box">
+                      <object class="GtkBox" id="cube_box">
                         <property name="can-target">True</property>
                         <property name="halign">end</property>
                         <property name="margin-end">10</property>
