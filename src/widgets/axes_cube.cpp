@@ -73,9 +73,14 @@ struct Face {
     std::string label;
     std::optional<glm::quat> target_quat;
 };
+
+struct Model {
+    std::vector<glm::vec3> vertices;
+    std::vector<Face> faces;
+};
 } // namespace
 
-static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
+static Model generate_model()
 {
     constexpr double S = 0.9;
     constexpr double B = 0.60;
@@ -180,7 +185,7 @@ static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
     vertices.push_back(origin - glm::vec3(0.0f, sy * axis_length, 0.0f));
     vertices.push_back(origin - glm::vec3(0.0f, 0.0f, sz * axis_length));
 
-    return {vertices, faces};
+    return Model{vertices, faces};
 }
 
 static const auto &get_cached_model()
@@ -210,7 +215,7 @@ void AxesCube::update_transformed_vertices()
     if (m_transformed_vertices.empty() || m_quat != m_cached_quat || m_width != m_cached_width
         || m_height != m_cached_height) {
 
-        const auto &vertices = get_cached_model().first;
+        const auto &vertices = get_cached_model().vertices;
         const float sc = (std::min(m_width, m_height) / 2.0f) - m_size;
 
         if (m_transformed_vertices.size() != vertices.size()) {
@@ -252,7 +257,7 @@ void AxesCube::setup_controllers()
     click_controller->signal_pressed().connect([this](int n_press, double x, double y) {
         int face_id = get_face_at_position(x, y);
         if (face_id >= 0) {
-            const auto &faces = get_cached_model().second;
+            const auto &faces = get_cached_model().faces;
             if (face_id < (int)faces.size()) {
                 const auto &face = faces[face_id];
                 std::cout << "Clicked: " << face.name << std::endl;
@@ -272,7 +277,7 @@ int AxesCube::get_face_at_position(double x, double y) const
         return -1;
 
     const glm::vec2 p(x - m_width / 2.0f, y - m_height / 2.0f);
-    const auto &faces = get_cached_model().second;
+    const auto &faces = get_cached_model().faces;
 
     int best_face = -1;
     float min_z = 1e9f;
@@ -316,7 +321,7 @@ void AxesCube::render(const Cairo::RefPtr<Cairo::Context> &cr, int w, int h)
     cr->translate(w / 2.0, h / 2.0);
     cr->set_line_width(1.0);
 
-    const auto &faces = get_cached_model().second;
+    const auto &faces = get_cached_model().faces;
 
     struct VisibleFace {
         const Face *face;
