@@ -97,12 +97,12 @@ static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
     };
 
     // faces
-    add_face({1 * 3 + 0, 5 * 3 + 0, 7 * 3 + 0, 3 * 3 + 0}, "+X", get_color(0, 1.0f), "X");
-    add_face({0 * 3 + 0, 2 * 3 + 0, 6 * 3 + 0, 4 * 3 + 0}, "−X", get_color(0, -1.0f), "−X");
-    add_face({2 * 3 + 1, 3 * 3 + 1, 7 * 3 + 1, 6 * 3 + 1}, "+Y", get_color(1, 1.0f), "Y");
-    add_face({0 * 3 + 1, 4 * 3 + 1, 5 * 3 + 1, 1 * 3 + 1}, "−Y", get_color(1, -1.0f), "−Y");
-    add_face({4 * 3 + 2, 6 * 3 + 2, 7 * 3 + 2, 5 * 3 + 2}, "+Z", get_color(2, 1.0f), "Z");
-    add_face({0 * 3 + 2, 1 * 3 + 2, 3 * 3 + 2, 2 * 3 + 2}, "−Z", get_color(2, -1.0f), "−Z");
+    add_face({1 * 3 + 0, 5 * 3 + 0, 7 * 3 + 0, 3 * 3 + 0}, "−X", get_color(0, 1.0f), "−X");
+    add_face({0 * 3 + 0, 2 * 3 + 0, 6 * 3 + 0, 4 * 3 + 0}, "+X", get_color(0, -1.0f), "X");
+    add_face({2 * 3 + 1, 3 * 3 + 1, 7 * 3 + 1, 6 * 3 + 1}, "−Y", get_color(1, 1.0f), "−Y");
+    add_face({0 * 3 + 1, 4 * 3 + 1, 5 * 3 + 1, 1 * 3 + 1}, "+Y", get_color(1, -1.0f), "Y");
+    add_face({4 * 3 + 2, 6 * 3 + 2, 7 * 3 + 2, 5 * 3 + 2}, "−Z", get_color(2, 1.0f), "−Z");
+    add_face({0 * 3 + 2, 1 * 3 + 2, 3 * 3 + 2, 2 * 3 + 2}, "+Z", get_color(2, -1.0f), "Z");
 
     // corners
     for (int i = 0; i < 8; ++i) {
