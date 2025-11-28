@@ -134,6 +134,18 @@ static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
     add_face({1 * 3 + 1, 5 * 3 + 1, 5 * 3 + 0, 1 * 3 + 0}, "Edge +X−Y", col_gray);
     add_face({2 * 3 + 1, 6 * 3 + 1, 6 * 3 + 0, 2 * 3 + 0}, "Edge −X+Y", col_gray);
     add_face({0 * 3 + 0, 4 * 3 + 0, 4 * 3 + 1, 0 * 3 + 1}, "Edge −X−Y", col_gray);
+
+    // Axis vertices (+X+Y+Z corner only)
+    constexpr float S_axis = 0.9f;
+    constexpr float offset_factor = 1.08f;
+    constexpr float axis_length = 0.55f;
+    const float sx = 1.0f, sy = 1.0f, sz = 1.0f;
+    glm::vec3 origin = glm::vec3(sx * S_axis, sy * S_axis, sz * S_axis) * offset_factor;
+    vertices.push_back(origin);
+    vertices.push_back(origin - glm::vec3(sx * axis_length, 0.0f, 0.0f));
+    vertices.push_back(origin - glm::vec3(0.0f, sy * axis_length, 0.0f));
+    vertices.push_back(origin - glm::vec3(0.0f, 0.0f, sz * axis_length));
+
     return {vertices, faces};
 }
 
@@ -367,9 +379,21 @@ void AxesCube::render(const Cairo::RefPtr<Cairo::Context> &cr, int w, int h)
         }
     }
 
-            cr->set_source_rgb(0, 0, 0);
-            cr->move_to(center_x - ext.get_width() / 2.0, center_y - ext.get_height() / 2.0);
-            m_layout->show_in_cairo_context(cr);
+    // corner axes display
+    const int AXIS_BASE = 8 * 3; // vertices[24..27]
+    if ((int)m_transformed_vertices.size() >= AXIS_BASE + 4) {
+        cr->set_line_width(2.0);
+        cr->set_line_cap(Cairo::Context::LineCap::ROUND);
+
+        const int base = AXIS_BASE;
+        for (int ax = 0; ax < 3; ++ax) {
+            const auto &o = m_transformed_vertices[base + 0];
+            const auto &e = m_transformed_vertices[base + (ax + 1)];
+            const Color &col = dune3d::get_color(ax, 1.0f);
+            cr->set_source_rgba(col.r, col.g, col.b, 0.8f);
+            cr->move_to(o.x, o.y);
+            cr->line_to(e.x, e.y);
+            cr->stroke();
         }
     }
 }
