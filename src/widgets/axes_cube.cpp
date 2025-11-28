@@ -315,13 +315,57 @@ void AxesCube::render(const Cairo::RefPtr<Cairo::Context> &cr, int w, int h)
             m_layout->set_text(face.label);
             auto ext = m_layout->get_pixel_logical_extents();
 
-            float center_x = 0, center_y = 0;
-            for (int idx : face.vertices) {
-                center_x += m_transformed_vertices[idx].x;
-                center_y += m_transformed_vertices[idx].y;
+            const glm::vec3 &v0 = m_transformed_vertices[face.vertices[0]];
+            const glm::vec3 &v1 = m_transformed_vertices[face.vertices[1]];
+            const glm::vec3 &v2 = m_transformed_vertices[face.vertices[2]];
+            glm::vec3 edge1 = v1 - v0;
+            glm::vec3 edge2 = v2 - v0;
+            glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+            float dot_prod_view = -normal.z;
+
+            static const float LABEL_BASE_SCALE = 1.0f;
+            static const float LABEL_MIN_VISIBILITY_THRESHOLD = 0.1f;
+            static const float LABEL_MAX_SCALE_FACTOR = 1.5f;
+            static const float LABEL_STEADY_DOT_PRODUCT_THRESHOLD = 0.5f;
+
+            float current_scale = 0.0f;
+            if (dot_prod_view > LABEL_MIN_VISIBILITY_THRESHOLD) {
+                if (dot_prod_view >= LABEL_STEADY_DOT_PRODUCT_THRESHOLD) {
+                    current_scale = LABEL_BASE_SCALE;
+                }
+                else {
+                    float scale_range = LABEL_STEADY_DOT_PRODUCT_THRESHOLD - LABEL_MIN_VISIBILITY_THRESHOLD;
+                    if (scale_range > 0) {
+                        float normalized_dot = (dot_prod_view - LABEL_MIN_VISIBILITY_THRESHOLD) / scale_range;
+                        current_scale = LABEL_BASE_SCALE * normalized_dot;
+                    }
+                    else {
+                        current_scale = 0.0f;
+                    }
+                }
+                current_scale = std::min(current_scale, LABEL_MAX_SCALE_FACTOR);
             }
-            center_x /= face.vertices.size();
-            center_y /= face.vertices.size();
+
+            if (current_scale > 0.01f) {
+                float center_x = 0, center_y = 0;
+                for (int idx : face.vertices) {
+                    center_x += m_transformed_vertices[idx].x;
+                    center_y += m_transformed_vertices[idx].y;
+                }
+                center_x /= face.vertices.size();
+                center_y /= face.vertices.size();
+
+                cr->save();
+                cr->translate(center_x, center_y);
+                cr->scale(current_scale, current_scale);
+
+                cr->set_source_rgb(0, 0, 0);
+                cr->move_to(-ext.get_width() / 2.0, -ext.get_height() / 2.0);
+                m_layout->show_in_cairo_context(cr);
+                cr->restore();
+            }
+        }
+    }
 
             cr->set_source_rgb(0, 0, 0);
             cr->move_to(center_x - ext.get_width() / 2.0, center_y - ext.get_height() / 2.0);
