@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <optional>
 
 namespace dune3d {
 
@@ -58,6 +59,11 @@ void AxesCube::set_quat(const glm::quat &q)
     queue_draw();
 }
 
+sigc::signal<void(const glm::quat &)> AxesCube::signal_quat_changed()
+{
+    return m_signal_quat_changed;
+}
+
 namespace {
 struct Face {
     std::vector<int> vertices;
@@ -65,6 +71,7 @@ struct Face {
     std::string name;
     Color color;
     std::string label;
+    std::optional<glm::quat> target_quat;
 };
 } // namespace
 
@@ -92,17 +99,23 @@ static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
     int id = 0;
     Color col_gray = Color::new_from_int(200, 200, 200);
 
-    auto add_face = [&](std::vector<int> idxs, std::string name, Color c, std::string lbl = "") {
-        faces.push_back({std::move(idxs), id++, std::move(name), c, std::move(lbl)});
+    auto add_face = [&](std::vector<int> idxs, std::string name, Color c, std::string lbl = "",
+                        std::optional<glm::quat> quat = std::nullopt) {
+        faces.push_back({std::move(idxs), id++, std::move(name), c, std::move(lbl), std::move(quat)});
     };
 
     // faces
-    add_face({1 * 3 + 0, 5 * 3 + 0, 7 * 3 + 0, 3 * 3 + 0}, "−X", get_color(0, 1.0f), "−X");
-    add_face({0 * 3 + 0, 2 * 3 + 0, 6 * 3 + 0, 4 * 3 + 0}, "+X", get_color(0, -1.0f), "X");
-    add_face({2 * 3 + 1, 3 * 3 + 1, 7 * 3 + 1, 6 * 3 + 1}, "−Y", get_color(1, 1.0f), "−Y");
-    add_face({0 * 3 + 1, 4 * 3 + 1, 5 * 3 + 1, 1 * 3 + 1}, "+Y", get_color(1, -1.0f), "Y");
-    add_face({4 * 3 + 2, 6 * 3 + 2, 7 * 3 + 2, 5 * 3 + 2}, "−Z", get_color(2, 1.0f), "−Z");
-    add_face({0 * 3 + 2, 1 * 3 + 2, 3 * 3 + 2, 2 * 3 + 2}, "+Z", get_color(2, -1.0f), "Z");
+    add_face({1 * 3 + 0, 5 * 3 + 0, 7 * 3 + 0, 3 * 3 + 0}, "−X", get_color(0, 1.0f), "−X",
+             glm::quat(glm::vec3(0, -glm::pi<float>() / 2, 0)));
+    add_face({0 * 3 + 0, 2 * 3 + 0, 6 * 3 + 0, 4 * 3 + 0}, "+X", get_color(0, -1.0f), "X",
+             glm::quat(glm::vec3(0, glm::pi<float>() / 2, 0)));
+    add_face({2 * 3 + 1, 3 * 3 + 1, 7 * 3 + 1, 6 * 3 + 1}, "−Y", get_color(1, 1.0f), "−Y",
+             glm::quat(glm::vec3(glm::pi<float>() / 2, 0, 0)));
+    add_face({0 * 3 + 1, 4 * 3 + 1, 5 * 3 + 1, 1 * 3 + 1}, "+Y", get_color(1, -1.0f), "Y",
+             glm::quat(glm::vec3(-glm::pi<float>() / 2, 0, 0)));
+    add_face({4 * 3 + 2, 6 * 3 + 2, 7 * 3 + 2, 5 * 3 + 2}, "−Z", get_color(2, 1.0f), "−Z",
+             glm::quat(glm::vec3(0, glm::pi<float>(), 0)));
+    add_face({0 * 3 + 2, 1 * 3 + 2, 3 * 3 + 2, 2 * 3 + 2}, "+Z", get_color(2, -1.0f), "Z", glm::quat(1, 0, 0, 0));
 
     // corners
     for (int i = 0; i < 8; ++i) {
@@ -111,29 +124,50 @@ static std::pair<std::vector<glm::vec3>, std::vector<Face>> generate_model()
         double sz = (i & 4) ? 1.0 : -1.0;
         std::string sname = "Corner " + std::string(sx > 0 ? "+X" : "-X") + std::string(sy > 0 ? "+Y" : "-Y")
                             + std::string(sz > 0 ? "+Z" : "-Z");
+
+        // isometric views looking toward the corner
+        glm::vec3 target_dir(sx, sy, sz);
+        glm::vec3 up(0, 0, 1);
+        if (std::abs(target_dir.z) > 0.9) {
+            up = glm::vec3(0, 1, 0);
+        }
+        glm::quat corner_quat = glm::quatLookAt(glm::normalize(target_dir), up);
+
         if (sx * sy * sz > 0)
-            add_face({i * 3 + 0, i * 3 + 2, i * 3 + 1}, sname, col_gray);
+            add_face({i * 3 + 0, i * 3 + 2, i * 3 + 1}, sname, col_gray, "", corner_quat);
         else
-            add_face({i * 3 + 2, i * 3 + 0, i * 3 + 1}, sname, col_gray);
+            add_face({i * 3 + 2, i * 3 + 0, i * 3 + 1}, sname, col_gray, "", corner_quat);
     }
 
     // X-axis edges
-    add_face({6 * 3 + 1, 7 * 3 + 1, 7 * 3 + 2, 6 * 3 + 2}, "Edge +Y+Z", col_gray);
-    add_face({2 * 3 + 2, 3 * 3 + 2, 3 * 3 + 1, 2 * 3 + 1}, "Edge +Y−Z", col_gray);
-    add_face({4 * 3 + 2, 5 * 3 + 2, 5 * 3 + 1, 4 * 3 + 1}, "Edge −Y+Z", col_gray);
-    add_face({0 * 3 + 1, 1 * 3 + 1, 1 * 3 + 2, 0 * 3 + 2}, "Edge −Y−Z", col_gray);
+    add_face({6 * 3 + 1, 7 * 3 + 1, 7 * 3 + 2, 6 * 3 + 2}, "Edge −Y−Z", col_gray, "",
+             glm::quat(glm::vec3(glm::pi<float>() / 4, glm::pi<float>() / 1, 0)));
+    add_face({2 * 3 + 2, 3 * 3 + 2, 3 * 3 + 1, 2 * 3 + 1}, "Edge −Y+Z", col_gray, "",
+             glm::quat(glm::vec3(glm::pi<float>() / 4, 0, 0)));
+    add_face({4 * 3 + 2, 5 * 3 + 2, 5 * 3 + 1, 4 * 3 + 1}, "Edge +Y−Z", col_gray, "",
+             glm::quat(glm::vec3(-glm::pi<float>() / 4, glm::pi<float>() / 1, 0)));
+    add_face({0 * 3 + 1, 1 * 3 + 1, 1 * 3 + 2, 0 * 3 + 2}, "Edge +Y+Z", col_gray, "",
+             glm::quat(glm::vec3(-glm::pi<float>() / 4, 0, 0)));
 
     // Y-axis edges
-    add_face({5 * 3 + 2, 7 * 3 + 2, 7 * 3 + 0, 5 * 3 + 0}, "Edge +X+Z", col_gray);
-    add_face({1 * 3 + 0, 3 * 3 + 0, 3 * 3 + 2, 1 * 3 + 2}, "Edge +X−Z", col_gray);
-    add_face({4 * 3 + 0, 6 * 3 + 0, 6 * 3 + 2, 4 * 3 + 2}, "Edge −X+Z", col_gray);
-    add_face({0 * 3 + 2, 2 * 3 + 2, 2 * 3 + 0, 0 * 3 + 0}, "Edge −X−Z", col_gray);
+    add_face({5 * 3 + 2, 7 * 3 + 2, 7 * 3 + 0, 5 * 3 + 0}, "Edge −X−Z", col_gray, "",
+             glm::quat(glm::vec3(0, -glm::pi<float>() * 3 / 4, 0)));
+    add_face({1 * 3 + 0, 3 * 3 + 0, 3 * 3 + 2, 1 * 3 + 2}, "Edge −X+Z", col_gray, "",
+             glm::quat(glm::vec3(0, -glm::pi<float>() / 4, 0)));
+    add_face({4 * 3 + 0, 6 * 3 + 0, 6 * 3 + 2, 4 * 3 + 2}, "Edge +X−Z", col_gray, "",
+             glm::quat(glm::vec3(0, glm::pi<float>() * 3 / 4, 0)));
+    add_face({0 * 3 + 2, 2 * 3 + 2, 2 * 3 + 0, 0 * 3 + 0}, "Edge +X+Z", col_gray, "",
+             glm::quat(glm::vec3(0, glm::pi<float>() / 4, 0)));
 
     // Z-axis edges
-    add_face({3 * 3 + 0, 7 * 3 + 0, 7 * 3 + 1, 3 * 3 + 1}, "Edge +X+Y", col_gray);
-    add_face({1 * 3 + 1, 5 * 3 + 1, 5 * 3 + 0, 1 * 3 + 0}, "Edge +X−Y", col_gray);
-    add_face({2 * 3 + 1, 6 * 3 + 1, 6 * 3 + 0, 2 * 3 + 0}, "Edge −X+Y", col_gray);
-    add_face({0 * 3 + 0, 4 * 3 + 0, 4 * 3 + 1, 0 * 3 + 1}, "Edge −X−Y", col_gray);
+    add_face({3 * 3 + 0, 7 * 3 + 0, 7 * 3 + 1, 3 * 3 + 1}, "Edge −X−Y", col_gray, "",
+             glm::quat(glm::vec3(glm::pi<float>() / 4, -glm::pi<float>() / 2, 0)));
+    add_face({1 * 3 + 1, 5 * 3 + 1, 5 * 3 + 0, 1 * 3 + 0}, "Edge −X+Y", col_gray, "",
+             glm::quat(glm::vec3(-glm::pi<float>() / 4, -glm::pi<float>() / 2, 0)));
+    add_face({2 * 3 + 1, 6 * 3 + 1, 6 * 3 + 0, 2 * 3 + 0}, "Edge +X−Y", col_gray, "",
+             glm::quat(glm::vec3(0, glm::pi<float>() / 2, -glm::pi<float>() / 4)));
+    add_face({0 * 3 + 0, 4 * 3 + 0, 4 * 3 + 1, 0 * 3 + 1}, "Edge +X+Y", col_gray, "",
+             glm::quat(glm::vec3(0, glm::pi<float>() / 2, glm::pi<float>() / 4)));
 
     // Axis vertices (+X+Y+Z corner only)
     constexpr float S_axis = 0.9f;
@@ -220,7 +254,12 @@ void AxesCube::setup_controllers()
         if (face_id >= 0) {
             const auto &faces = get_cached_model().second;
             if (face_id < (int)faces.size()) {
-                std::cout << "Clicked: " << faces[face_id].name << std::endl;
+                const auto &face = faces[face_id];
+                std::cout << "Clicked: " << face.name << std::endl;
+
+                if (face.target_quat) {
+                    m_signal_quat_changed.emit(*face.target_quat);
+                }
             }
         }
     });

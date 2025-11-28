@@ -155,6 +155,8 @@ Dune3DAppWindow::Dune3DAppWindow(BaseObjectType *cobject, const Glib::RefPtr<Gtk
         get_canvas().signal_view_changed().connect(
                 sigc::track_obj([this, axes_cube] { axes_cube->set_quat(get_canvas().get_cam_quat()); }, *axes_cube));
         axes_cube->set_quat(get_canvas().get_cam_quat());
+
+        axes_cube->signal_quat_changed().connect([this](const glm::quat &q) { get_canvas().animate_to_cam_quat(q); });
     }
 
 

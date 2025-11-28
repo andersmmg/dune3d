@@ -9,6 +9,8 @@ public:
     AxesCube();
     void set_quat(const glm::quat &q);
 
+    sigc::signal<void(const glm::quat &)> signal_quat_changed();
+
 private:
     glm::quat m_quat;
     Glib::RefPtr<Pango::Layout> m_layout;
@@ -23,6 +25,8 @@ private:
     glm::quat m_cached_quat{1, 0, 0, 0};
     int m_cached_width = 0;
     int m_cached_height = 0;
+
+    sigc::signal<void(const glm::quat &)> m_signal_quat_changed;
 
     void render(const Cairo::RefPtr<Cairo::Context> &cr, int w, int h);
     void create_layout();
